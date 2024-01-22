@@ -1,0 +1,154 @@
+#!/bin/bash
+
+# Usage: build-livepatches $to_ver_rel [$base_ver_rel(s) ...]
+#
+# Given the desired $to_ver_rel, the build-livepatches script will build live
+# patches for all available bases or the set of bases specified on the
+# command-line.
+#
+# The script expects that:
+#
+# * The base Xen source is at /usr/src/xen-$base_ver_rel
+# * The base xen-syms is at   /usr/src/xen-$base_ver_rel/xen-syms
+# * The base Xen config is at /usr/src/xen-$base_ver_rel/buildconfigs/config-release
+#
+# This can normally be achieved by installing the corresponding xen-lp-devel
+# RPM.
+#
+# Built livepatches are output in the current directory, named
+# livepatch-$base_ver_rel-$to_ver_rel.livepatch.  Note that due to livepatch
+# naming restrictions, the name may be truncated and certain characters
+# replaced.
+
+set -e
+
+die() {
+    echo "$*"
+    exit 1
+}
+
+# Obtain the Build ID from the Xen debugging symbols
+build_id() {
+    # $1 = any xen-syms file
+    readelf -n "$1" | grep 'Build ID:' | awk '{print $3}'
+}
+
+# If we're being sourced by other scripts for common library functionality,
+# then we're done now.
+return 0 2>/dev/null || :
+
+
+SCRIPTDIR="$(readlink -f "$(dirname "$(type -p "$0")")")"
+PQDIR="${PQDIR:-$SCRIPTDIR/SOURCES}"
+
+usage() {
+    echo "Usage: $0 \$to_ver_rel [\$base_ver_rel ...]"
+}
+
+patch_name_string() {
+    echo "${1//[^a-zA-Z0-9_-]/-}" | cut -c 1-48
+}
+
+build_one() {
+    # $1 = $base_ver_rel
+
+    local series="$PQDIR/series-$1"
+    local lp_devel_path="/usr/src/xen-$1"
+    local buildid lpname lp_src
+
+    # The livepatch main name has dashes expanded, then dashes and dots
+    # substituted for underscores.
+    lpname="lp_$1-$TO_VER_REL"
+    lpname=${lpname//-/--}
+    lpname=${lpname//[-.]/_}
+
+    lp_patch="${lpname}.patch"
+
+    # The livepatch binary name might be truncated
+    lp_bin="$(patch_name_string ${lpname}).livepatch"
+
+    echo "Building a live patch against $1..."
+
+    if [ ! -f "$series" ]; then
+        die "Error: Series file series-$1 missing"
+    fi
+
+    if [ ! -d ${lp_devel_path} ]; then
+        die "Error: Development files missing:" ${lp_devel_path}
+    fi
+
+    rm -rf -- patched builddir
+
+    # Create patched source
+    cp -r -- ${lp_devel_path} patched
+    (
+        cd patched
+
+        sed 's/#.*$//g' "$series" | while read p; do
+            echo "Applying $p..."
+
+            if [ ! -f "$PQDIR/$p" ]; then
+                die "Error: Patch file $p missing"
+            fi
+            patch -p1 -F 0 < "$PQDIR/$p"
+        done
+    )
+
+    echo "Generating combined patch..."
+    cp -r ${lp_devel_path} builddir
+    diff -Naur -x \*.orig builddir patched > $lp_patch ||:
+
+    buildid=$(build_id $lp_devel_path/xen-syms)
+
+    echo "Running livepatch-build..."
+    (
+        cd builddir
+
+        if [ -f "${lp_devel_path}/prepare-build" ]; then
+            source ${lp_devel_path}/prepare-build
+        fi
+        livepatch-build -s . -p "../$lp_patch" -o out -d --xen-syms ${lp_devel_path}/xen-syms -c ${lp_devel_path}/buildconfigs/config-release  --depends "${buildid}" --xen-depends "${buildid}"
+    )
+    mkdir -p "out/${buildid}"
+    mv "builddir/out/${lp_bin}" "out/${buildid}"
+
+    echo "Cleaning up..."
+    rm -rf -- patched builddir $lp_patch
+
+    echo "Built $lp_bin"
+}
+
+if [ $# -lt 1 ]; then
+    usage
+    exit 1
+fi
+
+if [ "$1" = "-h" -o "$1" = "--help" ]; then
+    usage
+    exit 0
+fi
+
+TO_VER_REL="$1"
+shift
+
+if [ $# -eq 0 ]; then
+    # If no $base_ver_rel's given, look for series-* files
+
+    series=${PQDIR}/series-*
+
+    if [ -z "$(shopt -s nullglob; echo $series)" ]; then
+        echo "No series files"
+        exit 0
+    fi
+
+    # Put $series back into $@
+    for s in $series; do
+        s="${s##*/}"
+        set -- "$@" "${s#series-}"
+    done
+fi
+
+while (( "$#" )); do
+    build_one "$1"
+    shift
+done

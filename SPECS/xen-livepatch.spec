@@ -1,33 +1,38 @@
-%global package_speccommit a7fdf1873f75cc14c5c867936323c20d82b3dff0
-%global package_srccommit v1.0.1
-
+%global package_speccommit 0b8358186f35a0d39dc3261e54177121892b1bfb
+%global usver 2.0
+%global xsver 1
+%global xsrel %{xsver}%{?xscount}%{?xshash}
 %global TO_VER_REL 10.18.xs8
 
 Name: xen-livepatch
 Summary: Live patches for Xen
-Version: 1.0.1
-Release: 1%{?xsrel}%{?dist}
+Version: 2.0
+Release: %{?xsrel}%{?dist}
 
 Group: System Environment/Hypervisor
 License: GPLv2
-Source0: xen-livepatch-1.0.1.tar.gz
+Source0: build-livepatches
+
+# Sources for each base
+# EndSources
 
 BuildRequires: livepatch-build-tools
-BuildRequires: elfutils
 
 # BuildRequires for each base
-# END
+# EndBuildRequires
+
+# Provides for each live patch
+# EndProvides
 
 %description
 Contains live patches to be applied against various Xen versions.
 
 
-%prep
-%autosetup -p1
-
-
 %build
-./build-livepatches %{TO_VER_REL}
+
+BUILD_LIVEPATCHES="%{SOURCE0}"
+
+PQDIR=%{_sourcedir} $BUILD_LIVEPATCHES %{TO_VER_REL}
 
 
 %install
@@ -49,6 +54,9 @@ fi
 
 
 %changelog
+* Mon Dec 4 2023 Andrew Cooper <andrew.cooper3@citrix.com> - 2.0-1
+- Merge infrastructure to simplify builds
+
 * Wed Jul 20 2022 Ming Lu <ming.lu@citrix.com> - 1.0.1-1
 - Initial release
 
