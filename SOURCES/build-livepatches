@@ -46,7 +46,7 @@ usage() {
 }
 
 patch_name_string() {
-    echo "${1//[^a-zA-Z0-9_-]/-}" | cut -c 1-48
+    echo "${1//[^a-zA-Z0-9_-]/-}" | cut -c -128
 }
 
 build_one() {
@@ -100,7 +100,7 @@ build_one() {
 
     buildid=$(build_id $lp_devel_path/xen-syms)
 
-    echo "Running livepatch-build..."
+    echo "Running livepatch-build for base $1 buildid ${buildid}..."
     (
         cd builddir
 

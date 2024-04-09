@@ -1,0 +1,37 @@
+diff --git a/xen/arch/x86/Makefile b/xen/arch/x86/Makefile
+index f213a6b56a4d..512891a67a10 100644
+--- a/xen/arch/x86/Makefile
++++ b/xen/arch/x86/Makefile
+@@ -80,6 +80,8 @@ obj-$(CONFIG_COMPAT) += x86_64/platform_hypercall.o
+ obj-y += sysctl.o
+ endif
+ 
++obj-y += lp-hooks.o
++
+ extra-y += asm-macros.i
+ extra-y += xen.lds
+ 
+diff --git a/xen/arch/x86/lp-hooks.c b/xen/arch/x86/lp-hooks.c
+new file mode 100644
+index 000000000000..8663a505a5ab
+--- /dev/null
++++ b/xen/arch/x86/lp-hooks.c
+@@ -0,0 +1,18 @@
++#include <xen/livepatch_payload.h>
++
++#include <xen/lib/x86/cpu-policy.h>
++#include <asm/cpu-policy.h>
++
++static void cf_check cmp_legacy_in_max_apply_hook(void)
++{
++    pv_max_cpu_policy.extd.cmp_legacy  = true;
++    hvm_max_cpu_policy.extd.cmp_legacy = true;
++}
++LIVEPATCH_LOAD_HOOK(cmp_legacy_in_max_apply_hook);
++
++static void cf_check cmp_legacy_in_max_revert_hook(void)
++{
++    pv_max_cpu_policy.extd.cmp_legacy  = host_cpu_policy.extd.cmp_legacy;
++    hvm_max_cpu_policy.extd.cmp_legacy = host_cpu_policy.extd.cmp_legacy;
++}
++LIVEPATCH_UNLOAD_HOOK(cmp_legacy_in_max_revert_hook);
