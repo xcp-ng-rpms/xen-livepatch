@@ -1,12 +1,12 @@
-%global package_speccommit 872357f7394c681f39181845c7146169e3cfbf78
-%global usver 3
-%global xsver 3
+%global package_speccommit b92536e7e4c4c02336fb63c2b97584414e3ca08c
+%global usver 4
+%global xsver 1
 %global xsrel %{xsver}%{?xscount}%{?xshash}
-%global TO_VER_REL 4.17.3-3.xs8
+%global TO_VER_REL 4.17.4-6.xs8
 
 Name: xen-livepatch
 Summary: Live patches for Xen
-Version: 3
+Version: 4
 Release: %{?xsrel}%{?dist}
 
 Group: System Environment/Hypervisor
@@ -14,22 +14,30 @@ License: GPLv2
 Source0: build-livepatches
 
 # Sources for each base
-Source10: series-4.17.3-1.xs8
-Source11: series-4.17.3-2.xs8
-Source12: xsa451-4.17.patch
-Source13: cmp-legacy-in-max-policy.patch
+Source10: series-4.17.4-1.xs8
+Source11: series-4.17.4-2.xs8
+Source12: series-4.17.4-3.xs8
+Source13: series-4.17.4-4.xs8
+Source14: series-4.17.4-5.xs8
+Source15: xsa458.patch
 # EndSources
 
 BuildRequires: livepatch-build-tools >= 20240223-1
 
 # BuildRequires for each base
-BuildRequires: xen-lp-devel_4.17.3_1.xs8
-BuildRequires: xen-lp-devel_4.17.3_2.xs8
+BuildRequires: xen-lp-devel_4.17.4_1.xs8
+BuildRequires: xen-lp-devel_4.17.4_2.xs8
+BuildRequires: xen-lp-devel_4.17.4_3.xs8
+BuildRequires: xen-lp-devel_4.17.4_4.xs8
+BuildRequires: xen-lp-devel_4.17.4_5.xs8
 # EndBuildRequires
 
 # Provides for each live patch
-Provides: livepatch(component/xen/base/4.17.3-1.xs8/to/4.17.3-3.xs8/base-buildid/133ed818bb68ac1a3341c9318dfdd3f118c5ba7d)
-Provides: livepatch(component/xen/base/4.17.3-2.xs8/to/4.17.3-3.xs8/base-buildid/29eb4d131192552316819179cb39cecfa323c163)
+Provides: livepatch(component/xen/base/4.17.4-1.xs8/to/4.17.4-6.xs8/base-buildid/0fb03584fd8735317754448cc995bba40efeec0b)
+Provides: livepatch(component/xen/base/4.17.4-2.xs8/to/4.17.4-6.xs8/base-buildid/ebe415a18be34e73a45a4901121dee2729c8f860)
+Provides: livepatch(component/xen/base/4.17.4-3.xs8/to/4.17.4-6.xs8/base-buildid/c09c5c4f62dbc94f6ad2ccba07a04123b34b8c22)
+Provides: livepatch(component/xen/base/4.17.4-4.xs8/to/4.17.4-6.xs8/base-buildid/219ffc93c66cafcf3908f24279bc7c94670d8df3)
+Provides: livepatch(component/xen/base/4.17.4-5.xs8/to/4.17.4-6.xs8/base-buildid/45d3d436b1ac9e107aa20268cf3414130a839321)
 # EndProvides
 
 %description
@@ -62,6 +70,16 @@ fi
 
 
 %changelog
+* Mon Jul  8 2024 Andrew Cooper <andrew.cooper3@citrix.com> - 4-1
+- Livepatch for:
+    - XSA-458 CVE-2024-31143
+  against Xen bases:
+    - 4.17.4-1
+    - 4.17.4-2
+    - 4.17.4-3
+    - 4.17.4-4
+    - 4.17.4-5
+
 * Mon Feb 26 2024 Roger Pau Monné <roger.pau@citrix.com> - 3-3
 - Use a non-vetoing hook.
 

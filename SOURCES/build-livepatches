@@ -85,7 +85,30 @@ build_one() {
         cd patched
 
         sed 's/#.*$//g' "$series" | while read p; do
-            echo "Applying $p..."
+            echo "Applying $p to the patched tree..."
+
+            if [ ! -f "$PQDIR/$p" ]; then
+                die "Error: Patch file $p missing"
+            fi
+            patch -p1 -F 0 < "$PQDIR/$p"
+        done
+    )
+
+    # Create pristine-patched source
+    cp -r ${lp_devel_path} builddir
+    (
+        cd builddir
+
+        local non_pristine_found=0
+        sed 's/#.*$//g' "$series" | while read p; do
+            if [[ "$p" != pristine-* ]]; then
+                non_pristine_found=1
+                continue
+            elif [ "$non_pristine_found" -eq 1 ]; then
+                die "Pristine patch after non-pristine patch in $series"
+            fi
+
+            echo "Applying $p to the original tree..."
 
             if [ ! -f "$PQDIR/$p" ]; then
                 die "Error: Patch file $p missing"
@@ -95,7 +118,6 @@ build_one() {
     )
 
     echo "Generating combined patch..."
-    cp -r ${lp_devel_path} builddir
     diff -Naur -x \*.orig builddir patched > $lp_patch ||:
 
     buildid=$(build_id $lp_devel_path/xen-syms)
